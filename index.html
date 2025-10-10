@@ -1,0 +1,1830 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LLM Misuse Detection Platform</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --primary-color: #0d6efd;
+            --secondary-color: #6c757d;
+            --success-color: #198754;
+            --warning-color: #ffc107;
+            --danger-color: #dc3545;
+            --dark-color: #212529;
+            --light-color: #f8f9fa;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f5f7fb;
+        }
+
+        .navbar-brand {
+            font-weight: 700;
+        }
+
+        .dashboard-card {
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s;
+            margin-bottom: 20px;
+            border: none;
+        }
+
+        .dashboard-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .stat-card {
+            text-align: center;
+            padding: 20px;
+        }
+
+        .stat-number {
+            font-size: 2.5rem;
+            font-weight: 700;
+        }
+
+        .threat-level-high {
+            border-left: 5px solid var(--danger-color);
+        }
+
+        .threat-level-medium {
+            border-left: 5px solid var(--warning-color);
+        }
+
+        .threat-level-low {
+            border-left: 5px solid var(--success-color);
+        }
+
+        .detection-result {
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+        }
+
+        .ai-detected {
+            background-color: rgba(220, 53, 69, 0.1);
+            border: 1px solid rgba(220, 53, 69, 0.3);
+        }
+
+        .human-detected {
+            background-color: rgba(25, 135, 84, 0.1);
+            border: 1px solid rgba(25, 135, 84, 0.3);
+        }
+
+        .mixed-detected {
+            background-color: rgba(255, 193, 7, 0.1);
+            border: 1px solid rgba(255, 193, 7, 0.3);
+        }
+
+        .heatmap-cell {
+            width: 20px;
+            height: 20px;
+            border-radius: 3px;
+            margin: 2px;
+            display: inline-block;
+        }
+
+        .heatmap-0 {
+            background-color: #ebedf0;
+        }
+
+        .heatmap-1 {
+            background-color: #c6e48b;
+        }
+
+        .heatmap-2 {
+            background-color: #7bc96f;
+        }
+
+        .heatmap-3 {
+            background-color: #239a3b;
+        }
+
+        .heatmap-4 {
+            background-color: #196127;
+        }
+
+        .network-node {
+            fill: steelblue;
+            stroke: #fff;
+            stroke-width: 1.5px;
+        }
+
+        .network-link {
+            stroke: #999;
+            stroke-opacity: 0.6;
+        }
+
+        .tab-pane {
+            padding: 20px 0;
+        }
+
+        .feature-indicator {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .feature-bar {
+            height: 8px;
+            border-radius: 4px;
+            margin: 0 10px;
+            flex-grow: 1;
+        }
+
+        .feature-value {
+            width: 50px;
+            text-align: right;
+            font-weight: 600;
+        }
+
+        .typing-indicator {
+            display: none;
+            text-align: center;
+            padding: 10px;
+        }
+
+        .typing-dots {
+            display: inline-block;
+        }
+
+        .typing-dots span {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: #6c757d;
+            margin: 0 2px;
+            animation: typing 1.4s infinite ease-in-out both;
+        }
+
+        .typing-dots span:nth-child(1) {
+            animation-delay: -0.32s;
+        }
+
+        .typing-dots span:nth-child(2) {
+            animation-delay: -0.16s;
+        }
+
+        @keyframes typing {
+
+            0%,
+            80%,
+            100% {
+                transform: scale(0);
+            }
+
+            40% {
+                transform: scale(1);
+            }
+        }
+
+        .confidence-meter {
+            height: 20px;
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 15px 0;
+            background-color: #e9ecef;
+        }
+
+        .confidence-fill {
+            height: 100%;
+            transition: width 0.5s ease;
+        }
+
+        .model-probability {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .model-name {
+            width: 120px;
+        }
+
+        .model-bar {
+            height: 12px;
+            border-radius: 6px;
+            margin: 0 10px;
+            flex-grow: 1;
+            background-color: #e9ecef;
+            overflow: hidden;
+        }
+
+        .model-fill {
+            height: 100%;
+            transition: width 0.5s ease;
+        }
+
+        .model-percent {
+            width: 50px;
+            text-align: right;
+            font-weight: 600;
+        }
+
+        .text-highlight {
+            background-color: rgba(255, 193, 7, 0.3);
+            padding: 2px 4px;
+            border-radius: 3px;
+        }
+
+        /* Login Page Styles */
+        .login-container {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        .login-card {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+            padding: 40px;
+            width: 100%;
+            max-width: 400px;
+        }
+
+        .login-logo {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .login-logo i {
+            font-size: 3rem;
+            color: #667eea;
+            margin-bottom: 15px;
+        }
+
+        /* Network Graph Styles */
+        .network-graph {
+            width: 100%;
+            height: 400px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .node {
+            position: absolute;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: steelblue;
+            border: 2px solid white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .node.core {
+            width: 16px;
+            height: 16px;
+            background: #dc3545;
+        }
+
+        .node.major {
+            width: 14px;
+            height: 14px;
+            background: #fd7e14;
+        }
+
+        .connection {
+            position: absolute;
+            height: 2px;
+            background: #999;
+            transform-origin: 0 0;
+        }
+
+        .heatmap-container {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 4px;
+            margin: 15px 0;
+        }
+
+        .heatmap-day {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .heatmap-hour {
+            width: 20px;
+            height: 20px;
+            border-radius: 3px;
+            background: #ebedf0;
+        }
+
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
+        .detailed-analysis-container {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 15px;
+        }
+
+        .analysis-section {
+            margin-bottom: 20px;
+        }
+
+        .feature-item {
+            border-bottom: 1px solid #e9ecef;
+            padding: 8px 0;
+        }
+
+        .tech-item {
+            border: 1px solid #dee2e6;
+            border-radius: 5px;
+            margin: 5px 0;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Login Page -->
+    <div id="loginPage" class="login-container">
+        <div class="login-card">
+            <div class="login-logo">
+                <i class="fas fa-shield-alt"></i>
+                <h3>LLM Threat Intelligence</h3>
+                <p class="text-muted">Secure Access Portal</p>
+            </div>
+            <form id="loginForm">
+                <div class="mb-3">
+                    <label for="username" class="form-label">Username</label>
+                    <input type="text" class="form-control" id="username" placeholder="Enter your username" required>
+                </div>
+                <div class="mb-3">
+                    <label for="password" class="form-label">Password</label>
+                    <input type="password" class="form-control" id="password" placeholder="Enter your password" required>
+                </div>
+                <div class="mb-3 form-check">
+                    <input type="checkbox" class="form-check-input" id="rememberMe">
+                    <label class="form-check-label" for="rememberMe">Remember me</label>
+                </div>
+                <button type="submit" class="btn btn-primary w-100">
+                    <i class="fas fa-sign-in-alt me-2"></i>Sign In
+                </button>
+                <div class="mt-3 text-center">
+                    <small class="text-muted">Demo credentials: admin / password</small>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Main Application (Hidden until login) -->
+    <div id="mainApp" style="display: none;">
+        <!-- Navigation -->
+        <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+            <div class="container">
+                <a class="navbar-brand" href="#">
+                    <i class="fas fa-shield-alt me-2"></i>LLM Threat Intelligence Platform
+                </a>
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+                <div class="collapse navbar-collapse" id="navbarNav">
+                    <ul class="navbar-nav ms-auto">
+                        <li class="nav-item">
+                            <a class="nav-link active" href="#dashboard">Dashboard</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#detection">Content Detection</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#intelligence">Threat Intelligence</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#sharing">Cross-Border Sharing</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#policy">Policy Framework</a>
+                        </li>
+                    </ul>
+                    <div class="navbar-nav ms-3">
+                        <span class="navbar-text me-3">
+                            <i class="fas fa-user me-1"></i>Welcome, <span id="userDisplay">Admin</span>
+                        </span>
+                        <button class="btn btn-outline-light btn-sm" id="logoutBtn">
+                            <i class="fas fa-sign-out-alt me-1"></i>Logout
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Main Content -->
+        <div class="container mt-4">
+            <!-- Dashboard -->
+            <div id="dashboard" class="content-section">
+                <h2 class="mb-4">Threat Intelligence Dashboard <span class="badge bg-danger pulse">LIVE</span></h2>
+
+                <!-- Stats Row -->
+                <div class="row">
+                    <div class="col-md-3">
+                        <div class="card dashboard-card threat-level-high">
+                            <div class="card-body stat-card">
+                                <h5 class="card-title">AI-Generated Threats</h5>
+                                <div class="stat-number text-danger" id="threatCount">1,247</div>
+                                <p class="card-text">Detected in last 24 hours</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card dashboard-card threat-level-medium">
+                            <div class="card-body stat-card">
+                                <h5 class="card-title">Disinformation Campaigns</h5>
+                                <div class="stat-number text-warning" id="campaignCount">42</div>
+                                <p class="card-text">Active campaigns</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card dashboard-card threat-level-low">
+                            <div class="card-body stat-card">
+                                <h5 class="card-title">Attribution Success</h5>
+                                <div class="stat-number text-success" id="attributionRate">78%</div>
+                                <p class="card-text">Of malicious content</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card dashboard-card">
+                            <div class="card-body stat-card">
+                                <h5 class="card-title">Response Time</h5>
+                                <div class="stat-number text-primary" id="responseTime">3.2s</div>
+                                <p class="card-text">Average detection</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Charts Row -->
+                <div class="row mt-4">
+                    <div class="col-md-8">
+                        <div class="card dashboard-card">
+                            <div class="card-header">
+                                <h5 class="card-title mb-0">Threat Activity Timeline</h5>
+                            </div>
+                            <div class="card-body">
+                                <canvas id="threatTimelineChart" height="250"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card dashboard-card">
+                            <div class="card-header">
+                                <h5 class="card-title mb-0">Content Type Distribution</h5>
+                            </div>
+                            <div class="card-body">
+                                <canvas id="contentTypeChart" height="250"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recent Threats -->
+                <div class="row mt-4">
+                    <div class="col-12">
+                        <div class="card dashboard-card">
+                            <div class="card-header d-flex justify-content-between align-items-center">
+                                <h5 class="card-title mb-0">Recent High-Priority Threats</h5>
+                                <span class="badge bg-danger">Live</span>
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="table table-hover">
+                                        <thead>
+                                            <tr>
+                                                <th>Time</th>
+                                                <th>Content Type</th>
+                                                <th>Threat Level</th>
+                                                <th>Platform</th>
+                                                <th>Attribution</th>
+                                                <th>Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="recentThreats">
+                                            <tr>
+                                                <td>14:32:05</td>
+                                                <td>Phishing Email</td>
+                                                <td><span class="badge bg-danger">High</span></td>
+                                                <td>Email Server</td>
+                                                <td>APT Group 4127</td>
+                                                <td>
+                                                    <button class="btn btn-sm btn-outline-primary">Analyze</button>
+                                                    <button class="btn btn-sm btn-outline-danger">Block</button>
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td>14:28:41</td>
+                                                <td>Disinformation</td>
+                                                <td><span class="badge bg-warning">Medium</span></td>
+                                                <td>Social Media</td>
+                                                <td>State Actor</td>
+                                                <td>
+                                                    <button class="btn btn-sm btn-outline-primary">Analyze</button>
+                                                    <button class="btn btn-sm btn-outline-warning">Monitor</button>
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td>14:25:12</td>
+                                                <td>Propaganda</td>
+                                                <td><span class="badge bg-danger">High</span></td>
+                                                <td>Forum</td>
+                                                <td>Extremist Group</td>
+                                                <td>
+                                                    <button class="btn btn-sm btn-outline-primary">Analyze</button>
+                                                    <button class="btn btn-sm btn-outline-danger">Block</button>
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td>14:19:33</td>
+                                                <td>Influence Op</td>
+                                                <td><span class="badge bg-warning">Medium</span></td>
+                                                <td>News Site</td>
+                                                <td>Unknown</td>
+                                                <td>
+                                                    <button class="btn btn-sm btn-outline-primary">Analyze</button>
+                                                    <button class="btn btn-sm btn-outline-warning">Monitor</button>
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Content Detection -->
+            <div id="detection" class="content-section" style="display: none;">
+                <h2 class="mb-4">Real-Time AI Content Detection</h2>
+
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="card dashboard-card">
+                            <div class="card-header">
+                                <h5 class="card-title mb-0">Content Analysis</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="mb-3">
+                                    <label for="contentInput" class="form-label">Enter text to analyze:</label>
+                                    <textarea class="form-control" id="contentInput" rows="8"
+                                        placeholder="Start typing or paste content here for real-time AI detection analysis...">In recent developments, we've seen significant changes in global economic policies that affect international markets. The strategic shifts in monetary policy by central banks worldwide have created both opportunities and challenges for investors. Experts suggest that diversifying portfolios and focusing on long-term growth sectors remains the most prudent approach in these uncertain times.</textarea>
+                                    <div class="form-text">Analysis begins automatically as you type. Minimum 50 characters recommended for accurate detection.</div>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="contentSource" class="form-label">Content Source (optional):</label>
+                                    <input type="text" class="form-control" id="contentSource"
+                                        placeholder="URL, platform, or source identifier">
+                                </div>
+                                <div class="typing-indicator" id="typingIndicator">
+                                    <div class="typing-dots">
+                                        <span></span>
+                                        <span></span>
+                                        <span></span>
+                                    </div>
+                                    <span class="ms-2">Analyzing text patterns...</span>
+                                </div>
+                                <button class="btn btn-primary" id="analyzeContent">
+                                    <i class="fas fa-search me-2"></i>Analyze Content
+                                </button>
+                                <button class="btn btn-outline-secondary" id="clearContent">
+                                    <i class="fas fa-eraser me-2"></i>Clear
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <div class="card dashboard-card">
+                            <div class="card-header">
+                                <h5 class="card-title mb-0">Detection Results</h5>
+                            </div>
+                            <div class="card-body">
+                                <div id="detectionResults">
+                                    <p class="text-muted">Analysis results will appear here as you type.</p>
+                                </div>
+
+                                <div class="mt-4">
+                                    <h6>Overall Confidence</h6>
+                                    <div class="confidence-meter">
+                                        <div id="confidenceFill" class="confidence-fill bg-success" style="width: 0%"></div>
+                                    </div>
+                                    <div class="d-flex justify-content-between">
+                                        <small>Human Written</small>
+                                        <small id="confidencePercent">0%</small>
+                                        <small>AI Generated</small>
+                                    </div>
+
+                                    <h6 class="mt-4">Model Probability Analysis</h6>
+                                    <div id="modelProbabilities">
+                                        <p class="text-muted">Model probabilities will appear here.</p>
+                                    </div>
+
+                                    <h6 class="mt-4">Detailed Analysis</h6>
+                                    <div id="detailedAnalysis">
+                                        <p class="text-muted">Detailed forensic analysis will be displayed here.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row mt-4">
+                    <div class="col-md-6">
+                        <div class="card dashboard-card">
+                            <div class="card-header">
+                                <h5 class="card-title mb-0">Linguistic Feature Analysis</h5>
+                            </div>
+                            <div class="card-body">
+                                <div id="featureAnalysis">
+                                    <p class="text-muted">Feature analysis will appear here.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <div class="card dashboard-card">
+                            <div class="card-header">
+                                <h5 class="card-title mb-0">Detection Metrics</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="row text-center">
+                                    <div class="col-md-3">
+                                        <h4>94.2%</h4>
+                                        <p class="text-muted">Accuracy</p>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <h4>92.7%</h4>
+                                        <p class="text-muted">Precision</p>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <h4>95.1%</h4>
+                                        <p class="text-muted">Recall</p>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <h4>1.2%</h4>
+                                        <p class="text-muted">False Positive Rate</p>
+                                    </div>
+                                </div>
+                                <div class="mt-3">
+                                    <canvas id="metricsChart" height="150"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Threat Intelligence -->
+            <div id="intelligence" class="content-section" style="display: none;">
+                <h2 class="mb-4">Threat Intelligence & Attribution</h2>
+
+                <div class="row">
+                    <div class="col-md-8">
+                        <div class="card dashboard-card">
+                            <div class="card-header">
+                                <h5 class="card-title mb-0">Disinformation Network Map</h5>
+                            </div>
+                            <div class="card-body">
+                                <div id="networkGraph" class="network-graph">
+                                    <!-- Network visualization will be generated here -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-md-4">
+                        <div class="card dashboard-card">
+                            <div class="card-header">
+                                <h5 class="card-title mb-0">Attribution Analysis</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="mb-3">
+                                    <h6>Model Fingerprinting</h6>
+                                    <div class="mb-2">
+                                        <span class="badge bg-primary">GPT-4</span>
+                                        <span class="badge bg-info">Claude</span>
+                                        <span class="badge bg-warning">Gemini</span>
+                                    </div>
+                                </div>
+
+                                <div class="mb-3">
+                                    <h6>Stylometric Match</h6>
+                                    <div class="progress mb-2" style="height: 20px;">
+                                        <div class="progress-bar bg-info" role="progressbar" style="width: 87%;"
+                                            aria-valuenow="87" aria-valuemin="0" aria-valuemax="100">87%</div>
+                                    </div>
+                                </div>
+
+                                <div class="mb-3">
+                                    <h6>Watermark Detection</h6>
+                                    <span class="badge bg-success">Detected</span>
+                                    <small class="text-muted d-block">OpenAI API Signature</small>
+                                </div>
+
+                                <div class="mb-3">
+                                    <h6>Threat Actor Profile</h6>
+                                    <div class="card bg-light">
+                                        <div class="card-body py-2">
+                                            <strong>APT Group 4127</strong>
+                                            <p class="mb-0 small">State-sponsored cyber unit specializing in influence operations</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row mt-4">
+                    <div class="col-md-6">
+                        <div class="card dashboard-card">
+                            <div class="card-header">
+                                <h5 class="card-title mb-0">Propagation Heatmap</h5>
+                            </div>
+                            <div class="card-body">
+                                <div id="heatmap" class="text-center">
+                                    <div class="heatmap-container" id="heatmapContainer">
+                                        <!-- Heatmap will be generated here -->
+                                    </div>
+                                    <div class="mt-3">
+                                        <small class="text-muted">Activity intensity over the past week (24-hour cycles)</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <div class="card dashboard-card">
+                            <div class="card-header">
+                                <h5 class="card-title mb-0">Campaign Correlation</h5>
+                            </div>
+                            <div class="card-body">
+                                <canvas id="campaignChart" height="250"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Cross-Border Sharing -->
+            <div id="sharing" class="content-section" style="display: none;">
+                <h2 class="mb-4">Cross-Border Intelligence Sharing</h2>
+
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="card dashboard-card">
+                            <div class="card-header">
+                                <h5 class="card-title mb-0">Allied Nations Network</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="mb-3">
+                                    <div class="d-flex justify-content-between mb-2">
+                                        <span>United States</span>
+                                        <span class="badge bg-success">Active</span>
+                                    </div>
+                                    <div class="d-flex justify-content-between mb-2">
+                                        <span>United Kingdom</span>
+                                        <span class="badge bg-success">Active</span>
+                                    </div>
+                                    <div class="d-flex justify-content-between mb-2">
+                                        <span>Canada</span>
+                                        <span class="badge bg-success">Active</span>
+                                    </div>
+                                    <div class="d-flex justify-content-between mb-2">
+                                        <span>Australia</span>
+                                        <span class="badge bg-warning">Limited</span>
+                                    </div>
+                                    <div class="d-flex justify-content-between mb-2">
+                                        <span>Germany</span>
+                                        <span class="badge bg-success">Active</span>
+                                    </div>
+                                    <div class="d-flex justify-content-between mb-2">
+                                        <span>Japan</span>
+                                        <span class="badge bg-success">Active</span>
+                                    </div>
+                                </div>
+
+                                <div class="alert alert-info">
+                                    <small>
+                                        <i class="fas fa-info-circle me-2"></i>
+                                        Federated learning ensures privacy while enabling collaborative model improvement.
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <div class="card dashboard-card">
+                            <div class="card-header">
+                                <h5 class="card-title mb-0">Intelligence Sharing Log</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="table table-sm">
+                                        <thead>
+                                            <tr>
+                                                <th>Time</th>
+                                                <th>Partner</th>
+                                                <th>Threat ID</th>
+                                                <th>Type</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr>
+                                                <td>14:30:22</td>
+                                                <td>UK-CyberCommand</td>
+                                                <td>#THR-8842</td>
+                                                <td><span class="badge bg-danger">Campaign</span></td>
+                                            </tr>
+                                            <tr>
+                                                <td>14:25:17</td>
+                                                <td>CAN-CSE</td>
+                                                <td>#THR-8839</td>
+                                                <td><span class="badge bg-warning">Actor</span></td>
+                                            </tr>
+                                            <tr>
+                                                <td>14:18:05</td>
+                                                <td>DEU-BSI</td>
+                                                <td>#THR-8835</td>
+                                                <td><span class="badge bg-danger">Campaign</span></td>
+                                            </tr>
+                                            <tr>
+                                                <td>14:12:41</td>
+                                                <td>UK-CyberCommand</td>
+                                                <td>#THR-8831</td>
+                                                <td><span class="badge bg-info">Pattern</span></td>
+                                            </tr>
+                                            <tr>
+                                                <td>14:05:29</td>
+                                                <td>JPN-NISC</td>
+                                                <td>#THR-8827</td>
+                                                <td><span class="badge bg-warning">Actor</span></td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+
+                                <button class="btn btn-outline-primary btn-sm">
+                                    <i class="fas fa-sync-alt me-1"></i>Sync Intelligence
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row mt-4">
+                    <div class="col-12">
+                        <div class="card dashboard-card">
+                            <div class="card-header">
+                                <h5 class="card-title mb-0">Blockchain Audit Trail</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="alert alert-success">
+                                    <i class="fas fa-check-circle me-2"></i>
+                                    All intelligence sharing transactions are recorded on permissioned blockchain with cryptographic integrity verification.
+                                </div>
+
+                                <div class="row text-center">
+                                    <div class="col-md-3">
+                                        <h5>1,428</h5>
+                                        <p class="text-muted">Shared Indicators</p>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <h5>0</h5>
+                                        <p class="text-muted">Tamper Events</p>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <h5>24</h5>
+                                        <p class="text-muted">Participating Agencies</p>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <h5>99.97%</h5>
+                                        <p class="text-muted">Uptime</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Policy Framework -->
+            <div id="policy" class="content-section" style="display: none;">
+                <h2 class="mb-4">Policy Framework & Governance</h2>
+
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="card dashboard-card">
+                            <div class="card-header">
+                                <h5 class="card-title mb-0">Vendor Compliance</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="mb-3">
+                                    <h6>LLM Provider Status</h6>
+                                    <div class="d-flex justify-content-between mb-2">
+                                        <span>OpenAI</span>
+                                        <span class="badge bg-success">Compliant</span>
+                                    </div>
+                                    <div class="d-flex justify-content-between mb-2">
+                                        <span>Anthropic</span>
+                                        <span class="badge bg-success">Compliant</span>
+                                    </div>
+                                    <div class="d-flex justify-content-between mb-2">
+                                        <span>Google</span>
+                                        <span class="badge bg-warning">Review</span>
+                                    </div>
+                                    <div class="d-flex justify-content-between mb-2">
+                                        <span>Meta</span>
+                                        <span class="badge bg-danger">Non-Compliant</span>
+                                    </div>
+                                </div>
+
+                                <button class="btn btn-outline-primary btn-sm w-100">
+                                    <i class="fas fa-tasks me-1"></i>Run Compliance Check
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-md-4">
+                        <div class="card dashboard-card">
+                            <div class="card-header">
+                                <h5 class="card-title mb-0">Red Team Exercises</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="mb-3">
+                                    <h6>Last Exercise: 2023-10-15</h6>
+                                    <div class="progress mb-2" style="height: 20px;">
+                                        <div class="progress-bar bg-success" role="progressbar" style="width: 92%;"
+                                            aria-valuenow="92" aria-valuemin="0" aria-valuemax="100">92%</div>
+                                    </div>
+                                    <small class="text-muted">Detection effectiveness against simulated attacks</small>
+                                </div>
+
+                                <div class="mb-3">
+                                    <h6>Vulnerabilities Identified</h6>
+                                    <span class="badge bg-danger me-1">12 Critical</span>
+                                    <span class="badge bg-warning me-1">7 Medium</span>
+                                    <span class="badge bg-info">3 Low</span>
+                                </div>
+
+                                <button class="btn btn-outline-warning btn-sm w-100">
+                                    <i class="fas fa-bug me-1"></i>Schedule Next Exercise
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-md-4">
+                        <div class="card dashboard-card">
+                            <div class="card-header">
+                                <h5 class="card-title mb-0">Privacy & Compliance</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="mb-3">
+                                    <h6>Data Protection Status</h6>
+                                    <span class="badge bg-success me-2">GDPR Compliant</span>
+                                    <span class="badge bg-success me-2">CCPA Ready</span>
+                                    <span class="badge bg-info">Federated Learning</span>
+                                </div>
+
+                                <div class="mb-3">
+                                    <h6>Transparency Reports</h6>
+                                    <div class="list-group">
+                                        <a href="#" class="list-group-item list-group-item-action py-2">
+                                            <i class="fas fa-file-pdf me-2 text-danger"></i>Q3 2023 Transparency Report
+                                        </a>
+                                        <a href="#" class="list-group-item list-group-item-action py-2">
+                                            <i class="fas fa-file-pdf me-2 text-danger"></i>Privacy Impact Assessment
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row mt-4">
+                    <div class="col-12">
+                        <div class="card dashboard-card">
+                            <div class="card-header">
+                                <h5 class="card-title mb-0">Governance Dashboard</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <h6>Oversight Committee</h6>
+                                        <ul class="list-group">
+                                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                                National Security Representative
+                                                <span class="badge bg-primary rounded-pill">Active</span>
+                                            </li>
+                                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                                Privacy Advocate
+                                                <span class="badge bg-primary rounded-pill">Active</span>
+                                            </li>
+                                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                                Civil Liberties Expert
+                                                <span class="badge bg-warning rounded-pill">Pending</span>
+                                            </li>
+                                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                                Technical Ethics Board
+                                                <span class="badge bg-primary rounded-pill">Active</span>
+                                            </li>
+                                        </ul>
+                                    </div>
+
+                                    <div class="col-md-6">
+                                        <h6>Policy Compliance Metrics</h6>
+                                        <div class="mb-3">
+                                            <small>Responsible AI Guidelines</small>
+                                            <div class="progress mb-2" style="height: 15px;">
+                                                <div class="progress-bar bg-success" role="progressbar" style="width: 95%;"
+                                                    aria-valuenow="95" aria-valuemin="0" aria-valuemax="100"></div>
+                                            </div>
+                                        </div>
+                                        <div class="mb-3">
+                                            <small>Vendor Security Requirements</small>
+                                            <div class="progress mb-2" style="height: 15px;">
+                                                <div class="progress-bar bg-warning" role="progressbar" style="width: 78%;"
+                                                    aria-valuenow="78" aria-valuemin="0" aria-valuemax="100"></div>
+                                            </div>
+                                        </div>
+                                        <div class="mb-3">
+                                            <small>International Cooperation Standards</small>
+                                            <div class="progress mb-2" style="height: 15px;">
+                                                <div class="progress-bar bg-success" role="progressbar" style="width: 88%;"
+                                                    aria-valuenow="88" aria-valuemin="0" aria-valuemax="100"></div>
+                                            </div>
+                                        </div>
+                                        <div class="mb-3">
+                                            <small>Public Transparency</small>
+                                            <div class="progress mb-2" style="height: 15px;">
+                                                <div class="progress-bar bg-info" role="progressbar" style="width: 65%;"
+                                                    aria-valuenow="65" aria-valuemin="0" aria-valuemax="100"></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Login Functionality
+        document.getElementById('loginForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            
+            // Simple demo authentication
+            if (username === 'admin' && password === 'password') {
+                document.getElementById('loginPage').style.display = 'none';
+                document.getElementById('mainApp').style.display = 'block';
+                document.getElementById('userDisplay').textContent = username;
+                
+                // Initialize all features after login
+                initializeDashboard();
+                initializeNetworkGraph();
+                initializeHeatmap();
+                initializeContentDetection();
+            } else {
+                alert('Invalid credentials! Use admin/password');
+            }
+        });
+
+        // Logout functionality
+        document.getElementById('logoutBtn').addEventListener('click', function() {
+            document.getElementById('mainApp').style.display = 'none';
+            document.getElementById('loginPage').style.display = 'flex';
+            document.getElementById('loginForm').reset();
+            // Clear any intervals
+            if (updateInterval) {
+                clearInterval(updateInterval);
+            }
+        });
+
+        // Dashboard variables
+        let threatTimelineChart, contentTypeChart, campaignChart, metricsChart;
+        let updateInterval;
+
+        function initializeDashboard() {
+            // Initialize charts
+            initializeCharts();
+            
+            // Start live updates
+            startLiveUpdates();
+            
+            // Initialize navigation
+            initializeNavigation();
+        }
+
+        function initializeCharts() {
+            const threatTimelineCtx = document.getElementById('threatTimelineChart').getContext('2d');
+            threatTimelineChart = new Chart(threatTimelineCtx, {
+                type: 'line',
+                data: {
+                    labels: ['00:00', '04:00', '08:00', '12:00', '16:00', '20:00'],
+                    datasets: [{
+                        label: 'AI-Generated Threats',
+                        data: [12, 19, 15, 25, 22, 30],
+                        borderColor: '#dc3545',
+                        backgroundColor: 'rgba(220, 53, 69, 0.1)',
+                        tension: 0.4,
+                        fill: true
+                    }, {
+                        label: 'Disinformation Campaigns',
+                        data: [5, 8, 6, 10, 12, 15],
+                        borderColor: '#ffc107',
+                        backgroundColor: 'rgba(255, 193, 7, 0.1)',
+                        tension: 0.4,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Threat Count'
+                            }
+                        }
+                    }
+                }
+            });
+
+            const contentTypeCtx = document.getElementById('contentTypeChart').getContext('2d');
+            contentTypeChart = new Chart(contentTypeCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Phishing', 'Disinformation', 'Propaganda', 'Influence Ops'],
+                    datasets: [{
+                        data: [35, 28, 22, 15],
+                        backgroundColor: [
+                            '#dc3545',
+                            '#ffc107',
+                            '#0dcaf0',
+                            '#6f42c1'
+                        ]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                        }
+                    }
+                }
+            });
+
+            const campaignCtx = document.getElementById('campaignChart').getContext('2d');
+            campaignChart = new Chart(campaignCtx, {
+                type: 'bar',
+                data: {
+                    labels: ['Campaign A', 'Campaign B', 'Campaign C', 'Campaign D', 'Campaign E'],
+                    datasets: [{
+                        label: 'Content Volume',
+                        data: [125, 100, 75, 150, 50],
+                        backgroundColor: '#0d6efd'
+                    }, {
+                        label: 'Attribution Confidence',
+                        data: [85, 70, 60, 90, 40],
+                        backgroundColor: '#20c997',
+                        type: 'line',
+                        tension: 0.4,
+                        fill: false
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 100
+                        }
+                    }
+                }
+            });
+
+            const metricsCtx = document.getElementById('metricsChart').getContext('2d');
+            metricsChart = new Chart(metricsCtx, {
+                type: 'bar',
+                data: {
+                    labels: ['Accuracy', 'Precision', 'Recall', 'F1-Score'],
+                    datasets: [{
+                        label: 'Performance Metrics',
+                        data: [94.2, 92.7, 95.1, 93.9],
+                        backgroundColor: [
+                            '#0d6efd',
+                            '#20c997',
+                            '#fd7e14',
+                            '#6f42c1'
+                        ]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 100,
+                            title: {
+                                display: true,
+                                text: 'Percentage'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function startLiveUpdates() {
+            updateInterval = setInterval(() => {
+                updateDashboardStats();
+                updateCharts();
+                updateRecentThreats();
+            }, 5000); // Update every 5 seconds
+        }
+
+        function updateDashboardStats() {
+            // Update threat count with random increment
+            const threatCount = document.getElementById('threatCount');
+            const currentThreats = parseInt(threatCount.textContent.replace(',', ''));
+            const newThreats = currentThreats + Math.floor(Math.random() * 10) + 1;
+            threatCount.textContent = newThreats.toLocaleString();
+            
+            // Update campaign count
+            const campaignCount = document.getElementById('campaignCount');
+            const currentCampaigns = parseInt(campaignCount.textContent);
+            const newCampaigns = Math.max(1, currentCampaigns + Math.floor(Math.random() * 3) - 1);
+            campaignCount.textContent = newCampaigns;
+            
+            // Update attribution rate with slight variation
+            const attributionRate = document.getElementById('attributionRate');
+            const currentRate = parseInt(attributionRate.textContent);
+            const newRate = Math.min(95, Math.max(65, currentRate + Math.floor(Math.random() * 6) - 3));
+            attributionRate.textContent = newRate + '%';
+            
+            // Update response time with slight variation
+            const responseTime = document.getElementById('responseTime');
+            const currentTime = parseFloat(responseTime.textContent);
+            const newTime = Math.min(5.0, Math.max(1.5, currentTime + (Math.random() * 0.4 - 0.2)));
+            responseTime.textContent = newTime.toFixed(1) + 's';
+        }
+
+        function updateCharts() {
+            // Update threat timeline chart
+            threatTimelineChart.data.datasets.forEach(dataset => {
+                dataset.data = dataset.data.map(value => {
+                    const change = Math.floor(Math.random() * 8) - 3;
+                    return Math.max(0, value + change);
+                });
+            });
+            threatTimelineChart.update();
+            
+            // Update content type chart with slight variations
+            contentTypeChart.data.datasets[0].data = contentTypeChart.data.datasets[0].data.map(value => {
+                const change = Math.floor(Math.random() * 5) - 2;
+                return Math.max(5, value + change);
+            });
+            contentTypeChart.update();
+            
+            // Update campaign chart
+            campaignChart.data.datasets[0].data = campaignChart.data.datasets[0].data.map(value => {
+                const change = Math.floor(Math.random() * 20) - 8;
+                return Math.max(10, value + change);
+            });
+            campaignChart.data.datasets[1].data = campaignChart.data.datasets[1].data.map(value => {
+                const change = Math.floor(Math.random() * 10) - 4;
+                return Math.max(20, Math.min(95, value + change));
+            });
+            campaignChart.update();
+        }
+
+        function updateRecentThreats() {
+            const threats = [
+                { time: '14:32:05', type: 'Phishing Email', level: 'High', platform: 'Email Server', attribution: 'APT Group 4127' },
+                { time: '14:28:41', type: 'Disinformation', level: 'Medium', platform: 'Social Media', attribution: 'State Actor' },
+                { time: '14:25:12', type: 'Propaganda', level: 'High', platform: 'Forum', attribution: 'Extremist Group' },
+                { time: '14:19:33', type: 'Influence Op', level: 'Medium', platform: 'News Site', attribution: 'Unknown' }
+            ];
+            
+            // Randomly update one threat entry
+            const threatIndex = Math.floor(Math.random() * threats.length);
+            const currentTime = new Date();
+            threats[threatIndex].time = currentTime.toTimeString().split(' ')[0];
+            
+            const threatsBody = document.getElementById('recentThreats');
+            threatsBody.innerHTML = threats.map(threat => `
+                <tr>
+                    <td>${threat.time}</td>
+                    <td>${threat.type}</td>
+                    <td><span class="badge bg-${threat.level === 'High' ? 'danger' : 'warning'}">${threat.level}</span></td>
+                    <td>${threat.platform}</td>
+                    <td>${threat.attribution}</td>
+                    <td>
+                        <button class="btn btn-sm btn-outline-primary">Analyze</button>
+                        <button class="btn btn-sm btn-outline-${threat.level === 'High' ? 'danger' : 'warning'}">${threat.level === 'High' ? 'Block' : 'Monitor'}</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function initializeNetworkGraph() {
+            const networkGraph = document.getElementById('networkGraph');
+            const width = networkGraph.offsetWidth;
+            const height = networkGraph.offsetHeight;
+            
+            // Create nodes (threat actors)
+            const nodes = [
+                { id: 1, x: width * 0.5, y: height * 0.5, type: 'core', label: 'APT Group 4127' },
+                { id: 2, x: width * 0.2, y: height * 0.3, type: 'major', label: 'State Actor A' },
+                { id: 3, x: width * 0.8, y: height * 0.3, type: 'major', label: 'Extremist Group' },
+                { id: 4, x: width * 0.1, y: height * 0.7, type: 'normal', label: 'Bot Network' },
+                { id: 5, x: width * 0.9, y: height * 0.7, type: 'normal', label: 'Influence Ops' },
+                { id: 6, x: width * 0.3, y: height * 0.2, type: 'normal', label: 'Proxy Server' },
+                { id: 7, x: width * 0.7, y: height * 0.2, type: 'normal', label: 'VPN Cluster' },
+                { id: 8, x: width * 0.4, y: height * 0.8, type: 'normal', label: 'Social Media' },
+                { id: 9, x: width * 0.6, y: height * 0.8, type: 'normal', label: 'Forum Hub' }
+            ];
+            
+            // Create connections
+            const connections = [
+                { from: 1, to: 2 }, { from: 1, to: 3 }, { from: 1, to: 4 }, { from: 1, to: 5 },
+                { from: 2, to: 6 }, { from: 3, to: 7 }, { from: 4, to: 8 }, { from: 5, to: 9 },
+                { from: 2, to: 4 }, { from: 3, to: 5 }, { from: 6, to: 8 }, { from: 7, to: 9 }
+            ];
+            
+            // Draw connections
+            connections.forEach(conn => {
+                const fromNode = nodes.find(n => n.id === conn.from);
+                const toNode = nodes.find(n => n.id === conn.to);
+                
+                const connection = document.createElement('div');
+                connection.className = 'connection';
+                
+                const length = Math.sqrt(Math.pow(toNode.x - fromNode.x, 2) + Math.pow(toNode.y - fromNode.y, 2));
+                const angle = Math.atan2(toNode.y - fromNode.y, toNode.x - fromNode.x) * 180 / Math.PI;
+                
+                connection.style.width = length + 'px';
+                connection.style.left = fromNode.x + 'px';
+                connection.style.top = fromNode.y + 'px';
+                connection.style.transform = `rotate(${angle}deg)`;
+                connection.style.opacity = '0.6';
+                
+                networkGraph.appendChild(connection);
+            });
+            
+            // Draw nodes
+            nodes.forEach(node => {
+                const nodeElement = document.createElement('div');
+                nodeElement.className = `node ${node.type}`;
+                nodeElement.style.left = (node.x - 8) + 'px';
+                nodeElement.style.top = (node.y - 8) + 'px';
+                nodeElement.title = node.label;
+                
+                networkGraph.appendChild(nodeElement);
+            });
+        }
+
+        function initializeHeatmap() {
+            const heatmapContainer = document.getElementById('heatmapContainer');
+            const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+            
+            let heatmapHTML = '';
+            days.forEach(day => {
+                heatmapHTML += `<div class="heatmap-day">`;
+                heatmapHTML += `<small class="text-center mb-1">${day}</small>`;
+                for (let hour = 0; hour < 24; hour++) {
+                    const intensity = Math.floor(Math.random() * 5); // 0-4
+                    heatmapHTML += `<div class="heatmap-hour heatmap-${intensity}" title="${day} ${hour}:00 - Intensity ${intensity}"></div>`;
+                }
+                heatmapHTML += `</div>`;
+            });
+            
+            heatmapContainer.innerHTML = heatmapHTML;
+        }
+
+        // Navigation functionality
+        function initializeNavigation() {
+            document.querySelectorAll('.navbar-nav .nav-link').forEach(link => {
+                link.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    
+                    // Hide all content sections
+                    document.querySelectorAll('.content-section').forEach(section => {
+                        section.style.display = 'none';
+                    });
+                    
+                    // Show selected section
+                    const targetId = this.getAttribute('href').substring(1);
+                    document.getElementById(targetId).style.display = 'block';
+                    
+                    // Update active nav link
+                    document.querySelectorAll('.navbar-nav .nav-link').forEach(navLink => {
+                        navLink.classList.remove('active');
+                    });
+                    this.classList.add('active');
+                });
+            });
+        }
+
+        // Content Detection functionality
+        function initializeContentDetection() {
+            const contentInput = document.getElementById('contentInput');
+            const typingIndicator = document.getElementById('typingIndicator');
+            let analysisTimeout;
+            
+            // Initialize with default text analysis
+            setTimeout(() => {
+                analyzeText(contentInput.value);
+            }, 1000);
+
+            contentInput.addEventListener('input', function() {
+                const text = this.value.trim();
+                clearTimeout(analysisTimeout);
+                
+                if (text.length > 50) {
+                    typingIndicator.style.display = 'block';
+                    analysisTimeout = setTimeout(() => {
+                        analyzeText(text);
+                        typingIndicator.style.display = 'none';
+                    }, 1000);
+                } else if (text.length === 0) {
+                    resetAnalysis();
+                } else {
+                    resetAnalysis();
+                    typingIndicator.style.display = 'none';
+                }
+            });
+            
+            document.getElementById('analyzeContent').addEventListener('click', function() {
+                const text = contentInput.value.trim();
+                if (text.length > 0) {
+                    typingIndicator.style.display = 'block';
+                    setTimeout(() => {
+                        analyzeText(text);
+                        typingIndicator.style.display = 'none';
+                    }, 800);
+                }
+            });
+            
+            document.getElementById('clearContent').addEventListener('click', function() {
+                contentInput.value = '';
+                resetAnalysis();
+            });
+        }
+
+        // Content detection helper functions
+        function resetAnalysis() {
+            document.getElementById('detectionResults').innerHTML = 
+                '<p class="text-muted">Analysis results will appear here as you type.</p>';
+            document.getElementById('confidenceFill').style.width = '0%';
+            document.getElementById('confidencePercent').textContent = '0%';
+            document.getElementById('modelProbabilities').innerHTML = 
+                '<p class="text-muted">Model probabilities will appear here.</p>';
+            document.getElementById('detailedAnalysis').innerHTML = 
+                '<p class="text-muted">Detailed forensic analysis will be displayed here.</p>';
+            document.getElementById('featureAnalysis').innerHTML = 
+                '<p class="text-muted">Feature analysis will appear here.</p>';
+        }
+        
+        function analyzeText(text) {
+            const result = simulateAIDetection(text);
+            updateDetectionResults(result, text);
+            updateConfidenceMeter(result.confidence);
+            updateModelProbabilities(result.models);
+            updateFeatureAnalysis(result.features);
+            updateDetailedAnalysis(result, text);
+        }
+        
+        function simulateAIDetection(text) {
+            const wordCount = text.split(/\s+/).length;
+            const sentenceCount = text.split(/[.!?]+/).length - 1;
+            const avgSentenceLength = wordCount / Math.max(sentenceCount, 1);
+            const paragraphCount = text.split(/\n\s*\n/).length;
+            
+            const sentenceLengthVariance = calculateSentenceLengthVariance(text);
+            const readabilityScore = calculateReadability(text);
+            
+            let aiProbability = 0;
+            
+            if (sentenceLengthVariance < 5) aiProbability += 20;
+            else if (sentenceLengthVariance < 10) aiProbability += 10;
+            
+            if (readabilityScore > 70) aiProbability += 15;
+            
+            const aiPhrases = [
+                'in recent developments', 'it is important to note', 'significantly', 
+                'diversifying', 'prudent approach', 'moreover', 'furthermore'
+            ];
+            
+            let aiPhraseCount = 0;
+            aiPhrases.forEach(phrase => {
+                if (text.toLowerCase().includes(phrase)) aiPhraseCount++;
+            });
+            
+            aiProbability += Math.min(aiPhraseCount * 8, 30);
+            
+            if (paragraphCount > 1 && avgSentenceLength > 15 && avgSentenceLength < 25) {
+                aiProbability += 15;
+            }
+            
+            aiProbability += Math.random() * 10 - 5;
+            aiProbability = Math.max(0, Math.min(100, aiProbability));
+            
+            let resultType;
+            if (aiProbability > 70) resultType = 'ai';
+            else if (aiProbability > 30) resultType = 'mixed';
+            else resultType = 'human';
+            
+            return {
+                type: resultType,
+                confidence: aiProbability,
+                models: {
+                    'GPT-4': Math.min(100, aiProbability + Math.random() * 20 - 10),
+                    'GPT-3.5': Math.min(100, aiProbability * 0.8 + Math.random() * 15 - 7),
+                    'Claude': Math.min(100, aiProbability * 0.7 + Math.random() * 15 - 7),
+                    'Gemini': Math.min(100, aiProbability * 0.6 + Math.random() * 15 - 7),
+                    'Human': 100 - aiProbability
+                },
+                features: {
+                    perplexity: 45 + Math.random() * 30,
+                    burstiness: 60 + Math.random() * 30,
+                    repetition: 5 + Math.random() * 10,
+                    coherence: 70 + Math.random() * 25,
+                    formality: 65 + Math.random() * 30
+                }
+            };
+        }
+        
+        function calculateSentenceLengthVariance(text) {
+            const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 0);
+            if (sentences.length < 2) return 10;
+            
+            const wordsPerSentence = sentences.map(s => s.split(/\s+/).length);
+            const avg = wordsPerSentence.reduce((a, b) => a + b, 0) / wordsPerSentence.length;
+            const variance = wordsPerSentence.reduce((a, b) => a + Math.pow(b - avg, 2), 0) / wordsPerSentence.length;
+            
+            return Math.sqrt(variance);
+        }
+        
+        function calculateReadability(text) {
+            const words = text.split(/\s+/).length;
+            const sentences = text.split(/[.!?]+/).length - 1;
+            const syllables = estimateSyllables(text);
+            
+            if (sentences === 0 || words === 0) return 0;
+            
+            return Math.max(0, Math.min(100, 206.835 - 1.015 * (words / sentences) - 84.6 * (syllables / words)));
+        }
+        
+        function estimateSyllables(text) {
+            return text.split(/\s+/).reduce((count, word) => {
+                return count + Math.max(1, word.length / 3);
+            }, 0);
+        }
+        
+        function updateDetectionResults(result, text) {
+            const resultsDiv = document.getElementById('detectionResults');
+            let icon, title, description, badgeClass;
+            
+            if (result.type === 'ai') {
+                icon = 'fas fa-robot';
+                title = 'AI-Generated Content Detected';
+                description = 'This content shows high probability of being generated by an LLM.';
+                badgeClass = 'ai-detected';
+            } else if (result.type === 'mixed') {
+                icon = 'fas fa-blender';
+                title = 'Mixed AI/Human Content';
+                description = 'This content appears to be a combination of human writing and AI generation.';
+                badgeClass = 'mixed-detected';
+            } else {
+                icon = 'fas fa-user';
+                title = 'Human-Written Content';
+                description = 'This content appears to be written by a human.';
+                badgeClass = 'human-detected';
+            }
+            
+            resultsDiv.innerHTML = `
+                <div class="detection-result ${badgeClass}">
+                    <h5><i class="${icon} me-2"></i>${title}</h5>
+                    <p class="mb-2">${description}</p>
+                    <span class="badge bg-${result.type === 'ai' ? 'danger' : result.type === 'mixed' ? 'warning' : 'success'}">
+                        ${Math.round(result.confidence)}% Confidence
+                    </span>
+                </div>
+            `;
+        }
+        
+        function updateConfidenceMeter(confidence) {
+            const confidenceFill = document.getElementById('confidenceFill');
+            const confidencePercent = document.getElementById('confidencePercent');
+            
+            confidenceFill.style.width = `${confidence}%`;
+            
+            if (confidence > 70) {
+                confidenceFill.className = 'confidence-fill bg-danger';
+            } else if (confidence > 30) {
+                confidenceFill.className = 'confidence-fill bg-warning';
+            } else {
+                confidenceFill.className = 'confidence-fill bg-success';
+            }
+            
+            confidencePercent.textContent = `${Math.round(confidence)}%`;
+        }
+        
+        function updateModelProbabilities(models) {
+            const modelsDiv = document.getElementById('modelProbabilities');
+            let modelsHTML = '';
+            
+            for (const [model, probability] of Object.entries(models)) {
+                const color = model === 'Human' ? 'success' : 
+                             model === 'GPT-4' ? 'danger' : 
+                             model === 'GPT-3.5' ? 'warning' : 'info';
+                
+                modelsHTML += `
+                    <div class="model-probability">
+                        <div class="model-name">${model}</div>
+                        <div class="model-bar">
+                            <div class="model-fill bg-${color}" style="width: ${probability}%"></div>
+                        </div>
+                        <div class="model-percent">${Math.round(probability)}%</div>
+                    </div>
+                `;
+            }
+            
+            modelsDiv.innerHTML = modelsHTML;
+        }
+        
+        function updateFeatureAnalysis(features) {
+            const featureDiv = document.getElementById('featureAnalysis');
+            let featuresHTML = '';
+            
+            for (const [feature, value] of Object.entries(features)) {
+                const normalizedValue = Math.min(100, Math.max(0, value));
+                let color, interpretation;
+                
+                if (feature === 'perplexity') {
+                    color = normalizedValue > 60 ? 'success' : normalizedValue > 40 ? 'warning' : 'danger';
+                    interpretation = normalizedValue > 60 ? 'Human-like' : normalizedValue > 40 ? 'Moderate' : 'AI-like';
+                } else if (feature === 'burstiness') {
+                    color = normalizedValue > 70 ? 'success' : normalizedValue > 50 ? 'warning' : 'danger';
+                    interpretation = normalizedValue > 70 ? 'Human-like' : normalizedValue > 50 ? 'Moderate' : 'AI-like';
+                } else if (feature === 'repetition') {
+                    color = normalizedValue < 10 ? 'success' : normalizedValue < 20 ? 'warning' : 'danger';
+                    interpretation = normalizedValue < 10 ? 'Low' : normalizedValue < 20 ? 'Moderate' : 'High';
+                } else if (feature === 'coherence') {
+                    color = normalizedValue > 80 ? 'success' : normalizedValue > 60 ? 'warning' : 'danger';
+                    interpretation = normalizedValue > 80 ? 'High' : normalizedValue > 60 ? 'Moderate' : 'Low';
+                } else if (feature === 'formality') {
+                    color = normalizedValue > 70 ? 'info' : normalizedValue > 50 ? 'warning' : 'success';
+                    interpretation = normalizedValue > 70 ? 'Formal' : normalizedValue > 50 ? 'Moderate' : 'Informal';
+                }
+                
+                featuresHTML += `
+                    <div class="feature-indicator">
+                        <div style="width: 120px;">${feature.charAt(0).toUpperCase() + feature.slice(1)}</div>
+                        <div class="feature-bar bg-light">
+                            <div class="feature-fill bg-${color}" style="width: ${normalizedValue}%"></div>
+                        </div>
+                        <div class="feature-value">${Math.round(normalizedValue)}%</div>
+                        <small class="text-${color}">${interpretation}</small>
+                    </div>
+                `;
+            }
+            
+            featureDiv.innerHTML = featuresHTML;
+        }
+        
+        function updateDetailedAnalysis(result, text) {
+            const analysisDiv = document.getElementById('detailedAnalysis');
+            
+            let analysisHTML = `
+                <div class="detailed-analysis-container">
+                    <h6 class="mb-3"><i class="fas fa-microscope me-2"></i>Forensic Analysis Details</h6>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="analysis-section mb-4">
+                                <h7 class="text-primary mb-2">Text Statistics</h7>
+                                <div class="feature-item d-flex justify-content-between py-1">
+                                    <span>Word Count:</span>
+                                    <span class="fw-bold">${text.split(/\s+/).length}</span>
+                                </div>
+                                <div class="feature-item d-flex justify-content-between py-1">
+                                    <span>Character Count:</span>
+                                    <span class="fw-bold">${text.length}</span>
+                                </div>
+                                <div class="feature-item d-flex justify-content-between py-1">
+                                    <span>Sentence Count:</span>
+                                    <span class="fw-bold">${text.split(/[.!?]+/).length - 1}</span>
+                                </div>
+                                <div class="feature-item d-flex justify-content-between py-1">
+                                    <span>Avg. Sentence Length:</span>
+                                    <span class="fw-bold">${Math.round(text.split(/\s+/).length / Math.max(text.split(/[.!?]+/).length - 1, 1))} words</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <div class="analysis-section mb-4">
+                                <h7 class="text-primary mb-2">Content Assessment</h7>
+                                <div class="feature-item d-flex justify-content-between py-1">
+                                    <span>Detection Type:</span>
+                                    <span class="fw-bold text-${result.type === 'ai' ? 'danger' : result.type === 'mixed' ? 'warning' : 'success'}">${result.type.toUpperCase()}</span>
+                                </div>
+                                <div class="feature-item d-flex justify-content-between py-1">
+                                    <span>Confidence Level:</span>
+                                    <span class="fw-bold">${Math.round(result.confidence)}%</span>
+                                </div>
+                                <div class="feature-item d-flex justify-content-between py-1">
+                                    <span>Risk Level:</span>
+                                    <span class="fw-bold text-${result.type === 'ai' ? 'danger' : result.type === 'mixed' ? 'warning' : 'success'}">${result.type === 'ai' ? 'HIGH' : result.type === 'mixed' ? 'MEDIUM' : 'LOW'}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+            `;
+            
+            if (result.type === 'ai' || result.type === 'mixed') {
+                analysisHTML += `
+                    <div class="alert alert-warning mt-3">
+                        <h6><i class="fas fa-exclamation-triangle me-2"></i>AI Indicators Detected</h6>
+                        <ul class="mb-2">
+                            ${result.type === 'ai' ? 
+                                '<li><strong>High probability</strong> of AI-generated content</li>' : 
+                                '<li><strong>Mixed signals</strong> - potential AI augmentation detected</li>'
+                            }
+                            <li>Confidence level: <strong>${Math.round(result.confidence)}%</strong></li>
+                            <li>Recommended for <strong>security review</strong></li>
+                        </ul>
+                        <div class="mt-2">
+                            <button class="btn btn-sm btn-outline-danger me-2" onclick="flagContent()">
+                                <i class="fas fa-flag me-1"></i>Flag for Review
+                            </button>
+                            <button class="btn btn-sm btn-outline-secondary" onclick="exportAnalysis()">
+                                <i class="fas fa-download me-1"></i>Export Report
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }
+
+            analysisHTML += `
+                </div>
+            `;
+
+            analysisDiv.innerHTML = analysisHTML;
+        }
+        
+        function flagContent() {
+            alert('Content flagged for security review. Case ID: #' + Math.random().toString(36).substr(2, 9).toUpperCase());
+        }
+        
+        function exportAnalysis() {
+            alert('Analysis report exported successfully!');
+        }
+    </script>
+</body>
+</html>
